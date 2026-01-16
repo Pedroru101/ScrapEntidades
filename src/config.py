@@ -25,7 +25,9 @@ class Config:
         # Variables críticas (falla si no existen)
         self.SUPABASE_URL = self._require("SUPABASE_URL")
         self.SUPABASE_KEY = self._require("SUPABASE_KEY")
-        self.OPENROUTER_API_KEY = self._require("OPENROUTER_API_KEY")
+        
+        # OpenRouter es opcional para pruebas sin IA
+        self.OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
         
         # Variables con defaults
         self.REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")

@@ -25,7 +25,11 @@ class TorClient:
     async def _get_session(self) -> aiohttp.ClientSession:
         """Obtiene o crea la sesión HTTP."""
         if self._session is None or self._session.closed:
-            connector = ProxyConnector.from_url(f"socks5://127.0.0.1:{self.socks_port}")
+            # Desactivar SSL verify para evitar errores en webs gubernamentales/antiguas
+            connector = ProxyConnector.from_url(
+                f"socks5://127.0.0.1:{self.socks_port}",
+                ssl=False
+            )
             timeout = aiohttp.ClientTimeout(total=self.timeout)
             self._session = aiohttp.ClientSession(connector=connector, timeout=timeout)
         return self._session

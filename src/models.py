@@ -18,6 +18,21 @@ class IndicadoresCalidad(BaseModel):
     sitio_profesional: bool = False
 
 
+class ConocimientoProfundo(BaseModel):
+    """Datos profundos de la organización."""
+    sector: Optional[str] = None
+    actividades_principales: List[str] = Field(default_factory=list)
+    retos_objetivos: List[str] = Field(default_factory=list)
+    estructura_interna: List[str] = Field(default_factory=list)
+    financiacion: List[str] = Field(default_factory=list)
+    colaboradores: List[str] = Field(default_factory=list)
+    particularidades: List[str] = Field(default_factory=list)
+
+class OportunidadesDetectadas(BaseModel):
+    """Oportunidades comerciales inferidas."""
+    productos_encajan: List[str] = Field(default_factory=list)
+    productos_no_encajan: List[str] = Field(default_factory=list)
+
 class AnalisisIA(BaseModel):
     """Resultado del análisis de IA."""
     nombre_empresa: Optional[str] = None
@@ -25,9 +40,13 @@ class AnalisisIA(BaseModel):
     sector: Optional[str] = None
     tamaño_estimado: Optional[str] = None
     servicios: List[str] = Field(default_factory=list)
-    pain_points: List[str] = Field(default_factory=list)
     tecnologias_detectadas: List[str] = Field(default_factory=list)
     indicadores_calidad: IndicadoresCalidad = Field(default_factory=IndicadoresCalidad)
+    conocimiento_profundo: Optional[ConocimientoProfundo] = None
+    oportunidades_detectadas: Optional[OportunidadesDetectadas] = None
+    # Mantener compatibilidad hacia atrás si es necesario
+    pain_points: List[str] = Field(default_factory=list)
+    oportunidad_comercial: Optional[str] = None
 
 
 class Organizacion(BaseModel):

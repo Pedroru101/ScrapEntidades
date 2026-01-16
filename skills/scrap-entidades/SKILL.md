@@ -1,12 +1,12 @@
 ---
 name: scrap-entidades
 description: >
-  Skill principal del sistema de scraping distribuido ScrapEntidades.
+  Skill principal del sistema ScrapEntidades (Canarias).
   Trigger: Preguntas de desarrollo, decisiones de arquitectura, crear scrapers.
 license: MIT
 metadata:
   author: ScrapEntidades
-  version: "1.0"
+  version: "2.0"
   scope: [root]
   auto_invoke: "Preguntas generales de desarrollo"
 ---
@@ -14,60 +14,59 @@ metadata:
 ## Arquitectura del Sistema
 
 ```
-CSV URLs → Cola Redis → Pool de Workers (12 hilos)
-                              ↓
-              Request Tor → Scraper → Análisis IA → Scoring → Supabase
+Lista de Nichos (Input)
+       ↓
+  [Searcher] → Búsqueda Google → URLs
+                                   ↓
+                             Cola Redis
+                                   ↓
+  [Worker] → Request Tor → Scraper → Filtro Canarias
+                                        ↓
+                                   Etiquetado IA (Si es Canarias)
+                                        ↓
+                                     Supabase
 ```
 
 ## Componentes
 
-| Componente    | Stack                              | Ubicación                      |
-| ------------- | ---------------------------------- | ------------------------------ |
-| Config        | Singleton Python                   | `src/config.py`                |
-| Scraper       | BeautifulSoup, regex               | `src/scraper.py`               |
-| Analizador IA | OpenRouter (Gemini/DeepSeek/Haiku) | `src/ai_analyzer.py`           |
-| Scoring       | Algoritmo ponderado 0-10           | `src/scoring.py`               |
-| Worker        | asyncio, Redis                     | `src/worker.py`                |
-| Cliente Tor   | aiohttp-socks                      | `src/utils/tor_client.py`      |
-| Base de Datos | Supabase + backup CSV              | `src/utils/supabase_client.py` |
+| Componente   | Rol                             | Ubicación            |
+| ------------ | ------------------------------- | -------------------- |
+| **Searcher** | Convierte Nichos en URLs        | `src/searcher.py`    |
+| **Worker**   | Procesa, Filtra, Etiqueta       | `src/worker.py`      |
+| Scraper      | Extracción RAW                  | `src/scraper.py`     |
+| IA           | Etiquetado (Sector/Pain Points) | `src/ai_analyzer.py` |
+| Config       | Singleton                       | `src/config.py`      |
+
+## Patrones Críticos
+
+### Filtro Geográfico Estricto
+
+```python
+CANARIAS_KEYWORDS = [
+    "canarias", "tenerife", "gran canaria", "lanzarote", "fuerteventura",
+    "la palma", "la gomera", "el hierro", "las palmas", "santa cruz"
+]
+# Si NO contiene keywords -> Descartar inmediatamente
+```
+
+### Extracción Profunda (Conocimiento Holístico)
+
+- **Objetivo**: Conocer la organización a fondo (Retos, Financiación, Estructura).
+- **Prohibido**: Filtrar pensando "¿sirve para MMI?".
+- **Regla**: Extraer TODO. La decisión de producto (MMI, Automatización, IA) es posterior.
+
+### Etiquetado IA
+
+- Input: Texto completo scrapeado.
+- Output: JSON rico con `conocimiento_profundo` y `oportunidades_detectadas`.
+- Fallo de IA -> Se guarda el lead sin etiquetas (graceful degradation).
 
 ## Comandos Rápidos
 
 ```bash
-# Desarrollo
-docker-compose up --build
+# Test de Filtro Canarias
+python scripts/test_canarias.py
 
-# Tests
-pytest tests/ -v
-
-# Inicializar directorios
-python scripts/init_dirs.py
+# Inyectar Nichos (Searcher)
+python src/searcher.py
 ```
-
-## Patrones Críticos
-
-### Cadena de Fallback IA
-
-```python
-MODELS = [
-    "google/gemini-flash-1.5",    # Primario
-    "deepseek/deepseek-chat",     # Fallback 1
-    "anthropic/claude-3-haiku",   # Fallback 2
-]
-```
-
-### Pesos del Scoring
-
-```python
-WEIGHTS = {
-    "contacto_completo": 2.0,  # Email + Teléfono
-    "sitio_profesional": 1.5,  # Calidad del diseño
-    "tamaño_empresa": 2.0,     # Tamaño de empresa
-    "sector_target": 1.5,      # Sectores prioritarios
-}
-```
-
-## Skills Relacionadas
-
-- `skill-creator` - Crear nuevas skills
-- `skill-sync` - Sincronizar skills a GEMINI.md

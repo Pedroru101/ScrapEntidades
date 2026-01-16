@@ -1,4 +1,4 @@
-"""Analizador IA con fallback multi-modelo."""
+"""Analizador IA con fallback multi-modelo para detección de prospectos de gabinete de prensa."""
 import json
 import logging
 from typing import Optional
@@ -17,25 +17,42 @@ MODELS = [
     "anthropic/claude-3-haiku",
 ]
 
-SYSTEM_PROMPT = """Eres un analista de negocios experto. Analiza el contenido de un sitio web empresarial y extrae información estructurada.
+SYSTEM_PROMPT = """Eres un analista de inteligencia de negocios experto.
 
-RESPONDE ÚNICAMENTE con JSON válido (sin markdown, sin explicaciones) siguiendo este esquema:
+Tu objetivo es extraer TODO el conocimiento posible sobre una organización para construir un perfil profundo ("Conocimiento Profundo").
+NO filtres información pensando en si "sirve" para un producto específico. Tu trabajo es entender quiénes son, qué hacen y qué les duele.
+
+Extrae la información en JSON estricto siguiendo este esquema:
+
 {
-    "nombre_empresa": "string o null",
-    "actividad_principal": "descripción breve del giro comercial",
-    "sector": "construccion|salud|educacion|retail|servicios|tecnologia|manufactura|otro",
-    "tamaño_estimado": "micro|pequeña|mediana|grande|desconocido",
-    "servicios": ["lista", "de", "servicios"],
-    "pain_points": ["posibles problemas o necesidades detectadas"],
-    "tecnologias_detectadas": ["wordpress", "shopify", etc],
-    "indicadores_calidad": {
-        "tiene_ssl": true/false,
-        "tiene_contacto": true/false,
-        "sitio_profesional": true/false
-    }
+  "conocimiento_profundo": {
+    "sector": "Sector específico (ej: ONG ambiental, Cooperativa agrícola)",
+    "actividades_principales": ["Lista de qué hacen realmente, proyectos, servicios"],
+    "retos_objetivos": ["Qué quieren lograr", "Qué problemas mencionan", "Metas estratégicas"],
+    "estructura_interna": ["Nº empleados", "Voluntarios", "Delegaciones", "Socios"],
+    "financiacion": ["Subvenciones", "Cuotas", "Ventas", "Patrocinios"],
+    "colaboradores": ["Con quién trabajan", "Redes a las que pertenecen"],
+    "particularidades": ["Datos únicos, premios, historia, reconocimientos"]
+  },
+  "oportunidades_detectadas": {
+    "productos_encajan": ["Lista de productos potenciales (MMI, Automatización, IA, Licitador, Mentorías)"],
+    "productos_no_encajan": ["Lista de productos descartados y POR QUÉ"]
+  }
 }
 
-Si no puedes extraer un campo, usa null. Sé conciso pero preciso."""
+CRITERIOS DE EXTRACCIÓN:
+- Sé exhaustivo. Si mencionan un presupuesto, extráelo. Si mencionan un problema de gestión, extráelo.
+- En 'financiacion', busca pistas en secciones de transparencia o memorias.
+- En 'retos', infiere problemas a partir de sus objetivos (ej: 'Queremos llegar a más gente' -> Reto: Alcance/Marketing).
+
+PRODUCTOS DISPONIBLES (Para sugerir en oportunidades):
+1. MMI: Seguimiento de medios (para quienes comunican mucho).
+2. Automatizaciones: CRM, gestión de socios/expedientes, emails.
+3. IA Contenidos: Generación de posts, recetas, materiales educativos.
+4. Mentorías: Estrategia, fondos europeos, negocio.
+5. Licitador: Búsqueda de fondos públicos/concursos.
+
+Responde SOLO con el JSON válido."""
 
 
 class AIAnalyzer:
@@ -89,15 +106,19 @@ class AIAnalyzer:
 
     def _build_prompt(self, text: str, meta: dict) -> str:
         """Construye el prompt para el análisis."""
-        return f"""Analiza este sitio web:
+        return f"""Analiza esta organización para identificar si es prospecto para servicios de gabinete de prensa:
 
 TÍTULO: {meta.get('title', 'Sin título')}
 DESCRIPCIÓN: {meta.get('description', 'Sin descripción')}
 
-CONTENIDO:
-{text[:3000]}
+CONTENIDO DE LA WEB:
+{text[:4000]}
 
-Extrae la información empresarial en formato JSON."""
+Extrae la información en formato JSON. Presta especial atención a:
+1. Si están ubicados en Canarias (prioridad máxima)
+2. Si tienen sala de prensa, notas de prensa, o sección de noticias
+3. Si son activos en RRSS y qué tan profesional es su comunicación
+4. Posibles pain points de comunicación que podríamos resolver"""
 
     def _parse_json(self, content: str) -> Optional[dict]:
         """Parsea JSON de la respuesta, limpiando markdown si existe."""

@@ -78,7 +78,7 @@ class Worker:
         await self._cleanup()
 
     async def _process_url(self, tarea: TareaURL):
-        """Pipeline completo para una URL."""
+        """Pipeline simplificado: Solo extracción Canarias."""
         url = str(tarea.url)
         domain = urlparse(url).netloc
         
@@ -98,16 +98,37 @@ class Worker:
         
         scraped = self.scraper.parse(html, url)
         
-        # 3. Análisis IA
-        ai_result = await self.ai.analyze(
-            scraped["text_content"],
-            scraped["meta"]
-        )
+        # 3. FILTRO GEOGRÁFICO ESTRICTO: Solo Canarias
+        # Keywords básicas de filtrado preliminar
+        canarias_keywords = [
+            "canarias", "tenerife", "gran canaria", "lanzarote", "fuerteventura", 
+            "la palma", "la gomera", "el hierro", "las palmas", "santa cruz"
+        ]
         
-        # 4. Scoring
-        score = self.scorer.calculate(scraped, ai_result)
-        tier = self.scorer.get_tier(score)
+        text_content = scraped["text_content"].lower()
+        meta_content = str(scraped["meta"]).lower()
         
+        is_canarias = any(kw in text_content for kw in canarias_keywords) or \
+                      any(kw in meta_content for kw in canarias_keywords)
+        
+        if not is_canarias:
+            logger.info(f"Descartado (No es Canarias): {url}")
+            return
+
+        logger.info(f"Detectado Canarias: {url}")
+        
+        # 4. ANÁLISIS IA (INFERENCIA A POSTERIORI)
+        # No filtramos por resultado, solo etiquetamos
+        ai_result = None
+        try:
+            if self.cfg.OPENROUTER_API_KEY:
+                ai_result = await self.ai.analyze(
+                    scraped["text_content"],
+                    scraped["meta"]
+                )
+        except Exception as e:
+            logger.warning(f"Fallo análisis IA (continuando sin él): {e}")
+
         # 5. Construir modelo
         org = Organizacion(
             url=url,
@@ -117,9 +138,10 @@ class Worker:
             emails=scraped["emails"],
             telefonos=scraped["phones"],
             redes_sociales=scraped["social"],
+            # Guardamos el análisis rico
             analisis=AnalisisIA(**ai_result) if ai_result else None,
-            score=score,
-            tier=tier,
+            score=0.0, # Scoring desactivado por ahora
+            tier="CANARIAS",
             machine_id=self.cfg.MACHINE_ID,
             nicho_origen=tarea.nicho,
         )
@@ -127,7 +149,7 @@ class Worker:
         # 6. Guardar en Supabase
         await self.db.upsert_organizacion(org)
         
-        # 7. Encolar URLs externas descubiertas (nivel 1)
+        # 7. Encolar URLs externas (mantenido para descubrimiento)
         if tarea.nivel == 0:
             for ext_url in scraped["external_links"][:5]:
                 nueva_tarea = TareaURL(url=ext_url, nivel=1, nicho=tarea.nicho)

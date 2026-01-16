@@ -1,45 +1,38 @@
-# Guía del Proyecto - ScrapEntidades
+# Código Fuente - Reglas para Antigravity
 
-## Cómo Usar Esta Guía
-
-- Empieza aquí para normas generales del proyecto.
-- Cada componente tiene reglas específicas en `src/GEMINI.md`.
-- Las reglas de componente tienen prioridad sobre las globales.
-
-## Skills Disponibles
-
-| Skill             | Descripción                    | Ubicación                                   |
-| ----------------- | ------------------------------ | ------------------------------------------- |
-| `scrap-entidades` | Skill principal del proyecto   | [SKILL.md](skills/scrap-entidades/SKILL.md) |
-| `skill-creator`   | Crear nuevas skills            | [SKILL.md](skills/skill-creator/SKILL.md)   |
-| `skill-sync`      | Sincronizar skills a GEMINI.md | [SKILL.md](skills/skill-sync/SKILL.md)      |
+> **Referencia de Skills**:
+>
+> - [`scrap-entidades`](../skills/scrap-entidades/SKILL.md)
 
 ### Invocación Automática
 
-Cuando realices estas acciones, SIEMPRE invoca la skill correspondiente PRIMERO:
-
 | Acción                            | Skill             |
 | --------------------------------- | ----------------- |
-| Preguntas generales de desarrollo | `scrap-entidades` |
-| Crear nuevas skills               | `skill-creator`   |
-| Después de modificar skills       | `skill-sync`      |
+| Trabajar en código scraper/worker | `scrap-entidades` |
 
 ---
 
 ## Resumen del Proyecto
 
-| Componente     | Ubicación            | Stack Tecnológico                   |
-| -------------- | -------------------- | ----------------------------------- |
-| Scraper Core   | `src/`               | Python 3.11, aiohttp, BeautifulSoup |
-| Analizador IA  | `src/ai_analyzer.py` | OpenRouter (Gemini/DeepSeek)        |
-| Sistema Worker | `src/worker.py`      | asyncio, Redis                      |
-| Utilidades     | `src/utils/`         | Tor, Supabase                       |
-| Scripts        | `scripts/`           | Automatización Python               |
-| Tests          | `tests/`             | pytest                              |
+Sistema de scraping distribuido enfocado exclusivamente en **Canarias**, alimentado por una búsqueda basada en **Nichos**.
+
+| Componente              | Ubicación                      | Stack Tecnológico                         |
+| ----------------------- | ------------------------------ | ----------------------------------------- |
+| **Buscador (Searcher)** | `src/searcher.py`              | Google Search / Mocks (Input: Nichos)     |
+| Scraper Core            | `src/scraper.py`               | BeautifulSoup, Filtro Geográfico Estricto |
+| Analizador IA           | `src/ai_analyzer.py`           | OpenRouter (Etiquetado a posteriori)      |
+| Sistema Worker          | `src/worker.py`                | Procesamiento asíncrono, Redis            |
+| Cliente Tor             | `src/utils/tor_client.py`      | aiohttp-socks (SSL off)                   |
+| Base de Datos           | `src/utils/supabase_client.py` | Supabase + backup CSV                     |
 
 ---
 
 ## REGLAS CRÍTICAS - NO NEGOCIABLES
+
+### Enfoque Geográfico
+
+- **SIEMPRE**: El sistema debe filtrar estrictamente contenido relacionado con **Canarias** (islas, municipios).
+- **NUNCA**: Procesar o guardar entidades fuera del ámbito de Canarias.
 
 ### Calidad de Código
 
@@ -49,37 +42,39 @@ Cuando realices estas acciones, SIEMPRE invoca la skill correspondiente PRIMERO:
 - NUNCA: Hardcodear secretos o API keys
 - NUNCA: Dejar bloques try-catch vacíos
 
-### Arquitectura
+### Arquitectura Async
 
-- SIEMPRE: Usar `get_config()` para configuración
-- SIEMPRE: Usar `TorClient` para requests externos
-- NUNCA: Hacer llamadas HTTP directas sin proxy Tor
-- NUNCA: Insertar datos sin calcular score primero
+- SIEMPRE: Usar `async def` para cualquier función con I/O
+- SIEMPRE: Usar `aiohttp-socks` a través de `TorClient`, nunca `requests` directo
+- NUNCA: Bloquear el event loop con I/O síncrono
 
 ---
 
-## Comandos de Desarrollo
+## ESTRUCTURA DEL PROYECTO
 
-```bash
-# Ejecutar con Docker
-docker-compose up --build
-
-# Ejecutar tests
-pytest tests/ -v
-
-# Inicializar directorios
-python scripts/init_dirs.py
-
-# Test de estrés
-python scripts/stress_test.py
+```
+src/
+├── __init__.py
+├── config.py         # Singleton config (FAIL FAST)
+├── searcher.py       # Buscador de Nichos -> URLs
+├── scraper.py        # Parsing RAW
+├── ai_analyzer.py    # Etiquetado inteligente
+├── worker.py         # Pipeline: Redis -> Scrape -> Filtro Canarias -> IA -> DB
+├── main.py           # Entrypoint
+└── utils/
+    ├── tor_client.py      # Tor Client
+    └── supabase_client.py # DB Client
 ```
 
----
+## COMANDOS
 
-## Guía de Commits
+```bash
+# Desarrollo
+docker-compose up --build
 
-Seguir conventional-commit: `<tipo>[alcance]: <descripción>`
+# Inyectar Nicho
+python src/searcher.py
 
-Tipos: `feat`, `fix`, `docs`, `chore`, `refactor`, `test`
-
-Alcances: `scraper`, `ai`, `worker`, `db`, `infra`
+# Tests
+python scripts/test_canarias.py
+```
