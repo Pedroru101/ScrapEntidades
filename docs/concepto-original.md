@@ -1,4 +1,4 @@
-# Sistema de Scraping Nocturno por Microsegmentación de Nichos
+# Sistema de Scraping por Microsegmentación de Nichos
 
 ## + Scoring Automático de Valor Potencial del Cliente
 
