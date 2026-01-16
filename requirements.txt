@@ -1,0 +1,26 @@
+# Core Async
+aiohttp>=3.9.0
+asyncio-redis>=0.16.0
+redis>=5.0.0
+
+# Web Scraping
+beautifulsoup4>=4.12.0
+lxml>=5.1.0
+fake-useragent>=1.4.0
+
+# SOCKS Proxy (Tor)
+aiohttp-socks>=0.8.4
+requests[socks]>=2.31.0
+
+# Database
+supabase>=2.3.0
+
+# AI / LLM
+openai>=1.3.0
+
+# Data Validation
+pydantic>=2.5.0
+
+# Utilities
+python-dotenv>=1.0.0
+tenacity>=8.2.0

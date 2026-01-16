@@ -1,0 +1,42 @@
+version: "3.9"
+
+services:
+  app:
+    build: .
+    container_name: scraper-worker
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_KEY=${SUPABASE_KEY}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+      - REDIS_URL=redis://redis:6379/0
+      - MACHINE_ID=${MACHINE_ID:-maquina_01}
+      - MAX_THREADS=${MAX_THREADS:-12}
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped
+    networks:
+      - scraper-net
+
+  redis:
+    image: redis:7-alpine
+    container_name: scraper-redis
+    command: redis-server --appendonly yes
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - scraper-net
+
+networks:
+  scraper-net:
+    driver: bridge
+
+volumes:
+  redis-data:
