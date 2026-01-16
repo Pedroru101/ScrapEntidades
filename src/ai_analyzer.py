@@ -10,11 +10,16 @@ from src.config import get_config
 
 logger = logging.getLogger(__name__)
 
-# Modelos con prioridad de fallback
+# Modelos con prioridad de fallback (Free Tier + Pago económico)
 MODELS = [
+    # 1. DeepSeek R1 (Razonamiento profundo - Free)
+    "deepseek/deepseek-r1:free",
+    
+    # 2. Gemini 2.0 Flash Experimental (Velocidad y Contexto - Free)
+    "google/gemini-2.0-flash-exp:free",
+    
+    # 3. Fallback económico (Pago - Garantía de servicio)
     "google/gemini-flash-1.5",
-    "deepseek/deepseek-chat",
-    "anthropic/claude-3-haiku",
 ]
 
 SYSTEM_PROMPT = """Eres un analista de inteligencia de negocios experto.
